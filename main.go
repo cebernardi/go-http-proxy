@@ -89,8 +89,21 @@ func Index(c *gin.Context) {
 		Error(c, http.StatusNotFound)
 		return
 	}
+	client := http.DefaultClient
+	req, err := http.NewRequest("GET", requestedURL, nil)
+	if err != nil {
+		Error(c, http.StatusInternalServerError)
+		return
+	}
 
-	resp, err := http.Get(requestedURL)
+	for key, values := range c.Request.Header {
+		for _, value := range values {
+			req.Header.Set(key,  value)
+		}
+	}
+	req.Header.Add("If-None-Match", `W/"wyzzy"`)
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		Error(c, http.StatusNotFound)
@@ -106,6 +119,11 @@ func Index(c *gin.Context) {
 		return
 	}
 
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
 	c.Header("Content-Type", resp.Header.Get("Content-Type"))
 	c.String(resp.StatusCode, string(body))
 }
